@@ -1,0 +1,27 @@
+diff --git a/app/locale/en.coffee b/app/locale/en.coffee
+index 2803f86..16967fc 100644
+--- a/app/locale/en.coffee
++++ b/app/locale/en.coffee
+@@ -798,6 +798,7 @@
+     thanks_header: "Request Received!"
+     thanks_sub_header: "Thanks for expressing interest in CodeCombat for your school."
+     thanks_p: "We'll be in touch soon! If you need to get in contact, you can reach us at:"
++    back_to_classes: "Back to Classes"
+     finish_signup: "Finish creating your teacher account:"
+     finish_signup_p: "Create an account to set up a class, add your students, and monitor their progress as they learn computer science."
+     signup_with: "Sign up with:"
+diff --git a/app/templates/teachers/request-quote-view.jade b/app/templates/teachers/request-quote-view.jade
+index 045bae3..a395817 100644
+--- a/app/templates/teachers/request-quote-view.jade
++++ b/app/templates/teachers/request-quote-view.jade
+@@ -180,6 +180,10 @@ block content
+       p
+         span.spr(data-i18n="teachers_quote.thanks_p")
+         a.spl(href="mailto:team@codecombat.com") team@codecombat.com
++      
++      unless me.isAnonymous()
++        a.btn.btn-lg.btn-navy(href="/teachers/classes")
++          span(data-i18n='teachers_quote.back_to_classes')
+ 
+       if me.isAnonymous()
+         h5(data-i18n="teachers_quote.finish_signup")
