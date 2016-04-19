@@ -51,7 +51,7 @@ module.exports = class TeacherClassView extends RootView
       if jqxhrs.length > 0
         @supermodel.trackCollection(@students)
       @listenTo @students, 'sync', @sortByName
-      @listenTo @students, 'sort', @renderSelectors.bind(@, '.students-table', '.student-levels-table')
+      @listenTo @students, 'sort', @renderSelectors.bind(@, '.students-table', '.student-levels-table', '.unassigned-students')
       
       @classroom.sessions = new LevelSessions()
       requests = @classroom.sessions.fetchForAllClassroomMembers(@classroom)
@@ -81,6 +81,10 @@ module.exports = class TeacherClassView extends RootView
     classroomsStub = new Classrooms([ @classroom ])
     @progressData = helper.calculateAllProgress(classroomsStub, @courses, @courseInstances, @students)
     # @conceptData = helper.calculateConceptsCovered(classroomsStub, @courses, @campaigns, @courseInstances, @students)
+    
+    for course in @courses.models
+      instance = @courseInstances.findWhere({ courseID: course.id, classroomID: @classroom.id })
+      course.members = instance?.get('members') || []
     
     @selectedCourse = @courses.first()
     super()
