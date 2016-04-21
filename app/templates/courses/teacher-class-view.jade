@@ -99,19 +99,21 @@ block content
           +copyCodes
           +addStudentsButton
           
-      ul.nav.nav-tabs.m-t-5(role='tablist')
-        li.active
-          a(href='#students-tab' data-toggle='tab')
+      ul#student-info-tabs.nav.nav-tabs.m-t-5(role='tablist')
+        li(class=(view.activeTab==="#students-tab" ? 'active' : ''))
+          a.students-tab-btn(href='#students-tab')
             .small-details.text-center(data-i18n='teacher.students')
         .tab-spacer
-        li
-          a(href='#course-progress-tab' data-toggle='tab')
+        li(class=(view.activeTab==="#course-progress-tab" ? 'active' : ''))
+          a.course-progress-tab-btn(href='#course-progress-tab')
             .small-details.text-center(data-i18n='teacher.course_progress')
         .tab-filler
       
       .tab-content
-        +studentsTab
-        +courseProgressTab
+        if view.activeTab=='#students-tab'
+          +studentsTab
+        else
+          +courseProgressTab
     
 mixin breadcrumbs
   .breadcrumbs
@@ -149,7 +151,7 @@ mixin addStudentsButton
       span(data-i18n='teacher.add_students_manually')
         
 mixin studentsTab
-  #students-tab.tab-pane.active
+  #students-tab
     +bulkAssignControls
     table.students-table
       thead
@@ -215,7 +217,7 @@ mixin enrollStudentButton(student)
     span(data-i18n='teacher.enroll_student')
     
 mixin courseProgressTab
-  #course-progress-tab.tab-pane.m-t-3
+  #course-progress-tab.m-t-3
     if view.courses
       .text-center
         span(data-i18n='teacher.select_course')
@@ -223,7 +225,7 @@ mixin courseProgressTab
         select.course-select
           each trimCourse in view.classroom.get('courses')
             - var course = view.courses.get(trimCourse._id);
-            option(value=course.id)
+            option(value=course.id selected=(course===view.selectedCourse))
               = course.get('name')
     if view.progressData
       .render-on-course-sync
@@ -233,9 +235,9 @@ mixin courseProgressTab
           each student in view.students.models
             if _.contains(view.selectedCourse.members, student.id)
               +studentLevelsRow(student)
-    // TODO: If any students aren't assigned the course
-    if view.selectedCourse && view.selectedCourse.members.length < view.students.length
-      .unassigned-students.render-on-course-sync
+    //- TODO: If any students aren't assigned the course
+    .unassigned-students.render-on-course-sync
+      if view.selectedCourse && view.selectedCourse.members.length < view.students.length
         h2
           span(data-i18n='TODO')
             | Students who have not been assigned
@@ -243,7 +245,6 @@ mixin courseProgressTab
           span= view.selectedCourse.get('name')
         for student in view.students.models
           unless _.contains(view.selectedCourse.members, student.id)
-            - console.log(_.contains(view.selectedCourse.members, student.id), student.id, student.get('name'))
             .row.unassigned-student-row.alternating-background
               .student-name.col-sm-3
                 = student.broadName()
@@ -258,11 +259,11 @@ mixin courseProgressTab
                   +longLevelName(student.latestCompleteLevel)
               .col-sm-2
                 if student.isEnrolled()
-                  .btn.btn-md.btn-navy.pull-right
+                  .assign-student-button.btn.btn-md.btn-navy.pull-right(data-user-id=student.id data-course-id=view.selectedCourse.id)
                     span(data-i18n='TODO')
                       | Assign Course
                 else
-                  .btn.btn-md.btn-navy.pull-right
+                  .enroll-student-button.btn.btn-md.btn-navy.pull-right(data-user-id=student.id)
                     span(data-i18n='TODO')
                       | Enroll Student
           
