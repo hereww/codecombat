@@ -127,14 +127,14 @@ module.exports = nativeDescription: "简体中文", englishDescription: "Chinese
     other: "其他"
     learn_to_code: "学会编程！"
 #    toggle_nav: "Toggle navigation"
-#    jobs: "Jobs"
+#    jobs: "工作"
 #    schools: "Schools"
 #    educator_wiki: "Educator Wiki"
 #    get_involved: "Get Involved"
 #    open_source: "Open source (GitHub)"
-#    support: "Support"
+#    support: "问题"
 #    faqs: "FAQs"
-#    help_pref: "Need help? Email"
+#    help_pref: "需要帮助? Email"
 #    help_suff: "and we'll get in touch!"
 
   modal:
