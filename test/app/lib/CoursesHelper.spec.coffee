@@ -4,26 +4,39 @@ Users = require 'collections/Users'
 Courses = require 'collections/Courses'
 CourseInstances = require 'collections/CourseInstances'
 Classrooms = require 'collections/Classrooms'
+Levels = require 'collections/Levels'
+LevelSessions = require 'collections/LevelSessions'
+factories = require 'test/app/factories'
 
-# These got broken by changes to fixtures :(
 describe 'CoursesHelper', ->
 
   describe 'calculateAllProgress', ->
 
     beforeEach ->
       # classrooms, courses, campaigns, courseInstances, students
-      @classroom = require 'test/app/fixtures/classrooms/active-classroom'
-      @classrooms = new Classrooms([ @classroom ])
-      @courses = require 'test/app/fixtures/courses'
-      @course = @courses.models[0]
-      @campaigns = require 'test/app/fixtures/campaigns'
-      @campaign = @campaigns.models[0]
-      @students = require 'test/app/fixtures/students'
+      courses = _.times(1, -> factories.makeCourse())
+      members = _.times(2, -> factories.makeUser())
+      levels = _.times(2, -> factories.makeLevel())
+      classroom = factories.makeClassroom({}, {courses, members, levels: [levels]})
+      courseInstance = factories.makeCourseInstance({}, { course: courses[0], classroom, members })
+      @classrooms = new Classrooms([ classroom ])
+      @classroom = @classrooms.first()
+      @courses = new Courses(courses)
+      @course = @courses.first()
+      @students = new Users(members)
+      @levels = new Levels(levels)
+      @courseInstances = new CourseInstances([courseInstance])
 
     describe 'when all students have completed a course', ->
       beforeEach ->
-        @classroom.sessions = require 'test/app/fixtures/level-sessions-completed'
-        @courseInstances = require 'test/app/fixtures/course-instances'
+        sessions = []
+        for level in @levels.models
+          for student in @students.models
+            sessions.push(factories.makeSession(
+              {state: {complete: true}}, 
+              {level: level.toJSON(), creator: student.toJSON()}
+            ))
+        @classroom.sessions = new LevelSessions(sessions)
       
       describe 'progressData.get({classroom, course})', ->
         it 'returns object with .completed=true and .started=true', ->
@@ -43,7 +56,7 @@ describe 'CoursesHelper', ->
       describe 'progressData.get({classroom, course, level, user})', ->
         it 'returns object with .completed=true and .started=true', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          for level in @campaign.getLevels().models
+          for level in @levels.models
             progress = progressData.get {@classroom, @course, level}
             expect(progress.completed).toBe true
             expect(progress.started).toBe true
@@ -51,7 +64,7 @@ describe 'CoursesHelper', ->
       describe 'progressData.get({classroom, course, level, user})', ->
         it 'returns object with .completed=true and .started=true', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          for level in @campaign.getLevels().models
+          for level in @levels.models
             for user in @students.models
               progress = progressData.get {@classroom, @course, level, user}
               expect(progress.completed).toBe true
@@ -60,8 +73,19 @@ describe 'CoursesHelper', ->
     describe 'when NOT all students have completed a course', ->
 
       beforeEach ->
-        @classroom.sessions = require 'test/app/fixtures/level-sessions-partially-completed'
-        @courseInstances = require 'test/app/fixtures/course-instances'
+        sessions = []
+        @finishedStudent = @students.first()
+        @unfinishedStudent = @students.last()
+        for level in @levels.models
+          sessions.push(factories.makeSession(
+            {state: {complete: true}}, 
+            {level: level.toJSON(), creator: @finishedStudent.toJSON()})
+          )
+        sessions.push(factories.makeSession(
+          {state: {complete: false}}, 
+          {level: @levels.first().toJSON(), creator: @unfinishedStudent.toJSON()})
+        )
+        @classroom.sessions = new LevelSessions(sessions)
 
       it 'progressData.get({classroom, course}) returns object with .completed=false', ->
         progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
@@ -71,49 +95,44 @@ describe 'CoursesHelper', ->
       describe 'when NOT all students have completed a level', ->
         it 'progressData.get({classroom, course, level}) returns object with .completed=false and .started=true', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          for level in @campaign.getLevels().models
+          for level in @levels.models
             progress = progressData.get {@classroom, @course, level}
             expect(progress.completed).toBe false
 
       describe 'when the student has completed the course', ->
         it 'progressData.get({classroom, course, user}) returns object with .completed=true and .started=true', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          student = @students.get('student0')
-          progress = progressData.get {@classroom, @course, user: student}
+          progress = progressData.get {@classroom, @course, user: @finishedStudent}
           expect(progress.completed).toBe true
           expect(progress.started).toBe true
 
       describe 'when the student has NOT completed the course', ->
         it 'progressData.get({classroom, course, user}) returns object with .completed=false and .started=true', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          student = @students.get('student1')
-          progress = progressData.get {@classroom, @course, user: student}
+          progress = progressData.get {@classroom, @course, user: @unfinishedStudent}
           expect(progress.completed).toBe false
           expect(progress.started).toBe true
 
       describe 'when the student has completed the level', ->
         it 'progressData.get({classroom, course, level, user}) returns object with .completed=true and .started=true', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          student = @students.get('student0')
-          for level in @campaign.getLevels().models
-            progress = progressData.get {@classroom, @course, level, user: student}
+          for level in @levels.models
+            progress = progressData.get {@classroom, @course, level, user: @finishedStudent}
             expect(progress.completed).toBe true
             expect(progress.started).toBe true
 
       describe 'when the student has NOT completed the level but has started', ->
         it 'progressData.get({classroom, course, level, user}) returns object with .completed=true and .started=true', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          user = @students.get('student2')
-          level = @campaign.getLevels().get('level0_0')
-          progress = progressData.get {@classroom, @course, level, user}
+          level = @levels.first()
+          progress = progressData.get {@classroom, @course, level, user: @unfinishedStudent}
           expect(progress.completed).toBe false
           expect(progress.started).toBe true
 
       describe 'when the student has NOT started the level', ->
         it 'progressData.get({classroom, course, level, user}) returns object with .completed=false and .started=false', ->
           progressData = helper.calculateAllProgress(@classrooms, @courses, @courseInstances, @students)
-          user = @students.get('student3')
-          level = @campaign.getLevels().get('level0_0')
-          progress = progressData.get {@classroom, @course, level, user}
+          level = @levels.last()
+          progress = progressData.get {@classroom, @course, level, user: @unfinishedStudent}
           expect(progress.completed).toBe false
           expect(progress.started).toBe false
